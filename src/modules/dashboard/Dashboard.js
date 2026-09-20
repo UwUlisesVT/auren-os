@@ -93,3 +93,13 @@ export function createDashboard() {
     </footer>
   `;
 }
+
+export function initDashboard() {
+  const currentDate = document.querySelector('#current-date');
+
+  if (!currentDate) return;
+
+  currentDate.textContent = new Intl.DateTimeFormat('es-MX', {
+    dateStyle: 'long'
+  }).format(new Date());
+}

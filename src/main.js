@@ -1,17 +1,11 @@
 import './style.css';
 import { createApp } from './app.js';
+import { navigateTo } from './services/router.js';
 
 const app = document.querySelector('#app');
 
 app.innerHTML = createApp();
-
-/* Fecha actual */
-
-const currentDate = document.querySelector('#current-date');
-
-currentDate.textContent = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'long'
-}).format(new Date());
+navigateTo('dashboard');
 
 /* Tema */
 
@@ -32,4 +26,18 @@ const sidebar = document.querySelector('#sidebar');
 
 menuButton.addEventListener('click', () => {
   sidebar.classList.toggle('sidebar-open');
+});
+
+/* Navegación */
+
+const navItems = document.querySelectorAll('.nav-item');
+
+navItems.forEach((item) => {
+  item.addEventListener('click', (event) => {
+    event.preventDefault();
+
+    const page = item.dataset.page;
+
+    navigateTo(page);
+  });
 });

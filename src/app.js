@@ -1,6 +1,5 @@
 import { createSidebar } from './components/sidebar/Sidebar.js';
 import { createHeader } from './components/header/Header.js';
-import { createDashboard } from './modules/dashboard/Dashboard.js';
 
 export function createApp() {
   return `
@@ -16,9 +15,7 @@ export function createApp() {
           ${createHeader()}
         </header>
 
-        <main class="main-content" id="main-content">
-          ${createDashboard()}
-        </main>
+        <main class="main-content" id="main-content"></main>
 
       </div>
 
