@@ -2,7 +2,10 @@ import {
   createDashboard,
   initDashboard
 } from '../modules/dashboard/Dashboard.js';
-import { createFinances } from '../modules/finances/Finances.js';
+import {
+  createFinances,
+  initFinances
+} from '../modules/finances/Finances.js';
 import { createGoals } from '../modules/goals/Goals.js';
 import { createSettings } from '../modules/settings/Settings.js';
 
@@ -14,6 +17,7 @@ const routes = {
 
   finances: {
     render: createFinances,
+    init: initFinances,
   },
 
   goals: {
