@@ -282,7 +282,10 @@ a {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(200px, 1fr)
+  );
   gap: 18px;
   margin-bottom: 18px;
 }
@@ -754,4 +757,45 @@ body.light-theme {
   .transaction-filters {
     grid-template-columns: 1fr;
   }
+}
+
+.finance-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.chart-card {
+  min-width: 0;
+}
+
+.chart-container {
+  position: relative;
+  height: 320px;
+  margin-top: 1.5rem;
+}
+
+.chart-empty-state {
+  display: grid;
+  place-items: center;
+
+  height: 100%;
+
+  color: var(--color-muted);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .finance-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-value.positive {
+  color: #22c55e;
+}
+
+.stat-value.negative {
+  color: #ef4444;
 }

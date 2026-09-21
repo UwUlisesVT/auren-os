@@ -6,8 +6,25 @@ import {
   updateTransaction,
 } from '../../services/transactionService.js';
 
+import {
+  getExpensesByCategory,
+  getFinancialSummary,
+  getSavingsRate,
+  getTransactionsByMonth,
+} from './financeAnalytics.js';
+
+import {
+  renderFinanceCharts,
+} from './components/FinanceCharts.js';
+
 function refreshFinances(filters = null) {
   const transactions = getTransactions();
+
+  const expensesByCategory =
+    getExpensesByCategory(transactions);
+
+  const transactionsByMonth =
+    getTransactionsByMonth(transactions);
 
   updateCategoryFilter(transactions);
 
@@ -26,6 +43,16 @@ function refreshFinances(filters = null) {
   renderTransactions(filteredTransactions, hasActiveFilters );
 
   updateFinanceSummary(transactions);
+
+  renderFinanceCharts({
+    expensesByCategory,
+    transactionsByMonth,
+  });
+
+  updateChartEmptyStates(
+    expensesByCategory,
+    transactionsByMonth
+  );
 }
 
 export function createFinances() {
@@ -128,37 +155,89 @@ export function createFinances() {
   </form>
 </section>
 
-    <section class="stats-grid">
-      <article class="stat-card">
-        <div class="stat-card-header">
-          <span class="stat-label">Balance</span>
-          <span class="stat-icon">◈</span>
-        </div>
+<section class="stats-grid">
+  <article class="stat-card">
+    <div class="stat-card-header">
+      <span class="stat-label">Balance</span>
+        <span class="stat-icon">◈</span>
+      </div>
 
-        <p class="stat-value" id="finance-balance">$0.00</p>
-        <p class="stat-description">Balance actual</p>
-      </article>
+      <p class="stat-value" id="finance-balance">$0.00</p>
+      <p class="stat-description">Balance actual</p>
+    </article>
 
-      <article class="stat-card">
-        <div class="stat-card-header">
-          <span class="stat-label">Ingresos</span>
-          <span class="stat-icon">↗</span>
-        </div>
+    <article class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Ingresos</span>
+        <span class="stat-icon">↗</span>
+      </div>
 
-        <p class="stat-value" id="finance-income">$0.00</p>
-        <p class="stat-description">Ingresos registrados</p>
-      </article>
+      <p class="stat-value" id="finance-income">$0.00</p>
+      <p class="stat-description">Ingresos registrados</p>
+    </article>
 
-      <article class="stat-card">
-        <div class="stat-card-header">
-          <span class="stat-label">Gastos</span>
-          <span class="stat-icon">↘</span>
-        </div>
+    <article class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Gastos</span>
+        <span class="stat-icon">↘</span>
+      </div>
 
-        <p class="stat-value" id="finance-expenses">$0.00</p>
-        <p class="stat-description">Gastos registrados</p>
-      </article>
-    </section>
+      <p class="stat-value" id="finance-expenses">$0.00</p>
+      <p class="stat-description">Gastos registrados</p>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Tasa de ahorro</span>
+        <span class="stat-icon">◎</span>
+      </div>
+
+      <p class="stat-value" id="finance-savings-rate">0%</p>
+      <p class="stat-description">Porcentaje de ingresos conservado</p>
+    </article>
+  </section>
+
+    <section class="finance-charts-grid">
+  <article class="dashboard-card chart-card">
+    <div class="card-header">
+      <div>
+        <p class="card-eyebrow">DISTRIBUCIÓN</p>
+        <h2>Gastos por categoría</h2>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="expenses-category-chart"></canvas>
+
+      <div
+        class="chart-empty-state hidden"
+        id="expenses-chart-empty"
+      >
+        Aún no hay gastos para analizar.
+      </div>
+    </div>
+  </article>
+
+  <article class="dashboard-card chart-card">
+    <div class="card-header">
+      <div>
+        <p class="card-eyebrow">TENDENCIA</p>
+        <h2>Ingresos vs. gastos</h2>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="monthly-finance-chart"></canvas>
+
+      <div
+        class="chart-empty-state hidden"
+        id="monthly-chart-empty"
+      >
+        Aún no hay movimientos para analizar.
+      </div>
+    </div>
+  </article>
+</section>
 
     <section class="dashboard-card transactions-card">
       <div class="card-header">
@@ -512,24 +591,46 @@ function renderTransactions(transactions, hasActiveFilters = false) {
 }
 
 function updateFinanceSummary(transactions) {
-  const income = transactions
-    .filter((transaction) => transaction.type === "income")
-    .reduce((total, transaction) => total + transaction.amount, 0);
+  const {
+    income,
+    expenses,
+    balance,
+  } = getFinancialSummary(transactions);
 
-  const expenses = transactions
-    .filter((transaction) => transaction.type === "expense")
-    .reduce((total, transaction) => total + transaction.amount, 0);
+  const savingsRate = getSavingsRate(transactions);
 
-  const balance = income - expenses;
-
-  document.querySelector("#finance-income").textContent =
+  document.querySelector('#finance-income').textContent =
     formatCurrency(income);
 
-  document.querySelector("#finance-expenses").textContent =
+  document.querySelector('#finance-expenses').textContent =
     formatCurrency(expenses);
 
-  document.querySelector("#finance-balance").textContent =
+  document.querySelector('#finance-balance').textContent =
     formatCurrency(balance);
+
+  document.querySelector('#finance-savings-rate').textContent =
+    formatPercentage(savingsRate);
+
+  const savingsRateElement =
+    document.querySelector('#finance-savings-rate');
+
+  savingsRateElement.classList.toggle(
+    'positive',
+    savingsRate > 0
+  );
+
+  savingsRateElement.classList.toggle(
+    'negative',
+    savingsRate < 0
+  );
+}
+
+function formatPercentage(value) {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value / 100);
 }
 
 function formatCurrency(amount) {
@@ -565,4 +666,30 @@ function formatDate(date) {
     month: 'short',
     year: 'numeric',
   }).format(localDate);
+}
+
+function updateChartEmptyStates(
+  expensesByCategory,
+  transactionsByMonth
+) {
+  const expensesCanvas =
+    document.querySelector('#expenses-category-chart');
+
+  const expensesEmpty =
+    document.querySelector('#expenses-chart-empty');
+
+  const monthlyCanvas =
+    document.querySelector('#monthly-finance-chart');
+
+  const monthlyEmpty =
+    document.querySelector('#monthly-chart-empty');
+
+  const hasExpenses = expensesByCategory.length > 0;
+  const hasMonthlyData = transactionsByMonth.length > 0;
+
+  expensesCanvas.classList.toggle('hidden', !hasExpenses);
+  expensesEmpty.classList.toggle('hidden', hasExpenses);
+
+  monthlyCanvas.classList.toggle('hidden', !hasMonthlyData);
+  monthlyEmpty.classList.toggle('hidden', hasMonthlyData);
 }
