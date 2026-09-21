@@ -38,3 +38,37 @@ export function saveTransaction(transaction) {
     JSON.stringify(transactions)
   );
 }
+
+export function deleteTransaction(id) {
+  const transactions = getTransactions();
+
+  const updatedTransactions = transactions.filter(
+    (transaction) => transaction.id !== id
+  );
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(updatedTransactions)
+  );
+}
+
+export function updateTransaction(id, updatedData) {
+  const transactions = getTransactions();
+
+  const updatedTransactions = transactions.map((transaction) => {
+    if (transaction.id !== id) {
+      return transaction;
+    }
+
+    return {
+      ...transaction,
+      ...updatedData,
+      amount: Number(updatedData.amount),
+    };
+  });
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(updatedTransactions)
+  );
+}

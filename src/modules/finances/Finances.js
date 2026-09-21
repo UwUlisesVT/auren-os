@@ -1,7 +1,9 @@
 import {
   createTransaction,
+  deleteTransaction,
   getTransactions,
   saveTransaction,
+  updateTransaction,
 } from '../../services/transactionService.js';
 
 export function createFinances() {
@@ -150,6 +152,7 @@ export function createFinances() {
 }
 
 export function initFinances() {
+  let editingTransactionId = null;
   const transactions = getTransactions();
 
   renderTransactions(transactions);
@@ -173,10 +176,20 @@ export function initFinances() {
   transactionDate.value = getTodayDate();
 
   newTransactionButton.addEventListener('click', () => {
+    editingTransactionId = null;
+
+    transactionForm.reset();
+    transactionDate.value = getTodayDate();
+
     transactionFormCard.classList.remove('hidden');
   });
 
   closeTransactionForm.addEventListener('click', () => {
+    editingTransactionId = null;
+    
+    transactionForm.reset();
+    transactionDate.value = getTodayDate();
+    
     transactionFormCard.classList.add('hidden');
   });
 
@@ -185,15 +198,26 @@ export function initFinances() {
 
     const formData = new FormData(transactionForm);
 
-    const transaction = createTransaction({
-      type: formData.get('type'),
-      amount: formData.get('amount'),
-      category: formData.get('category'),
-      description: formData.get('description'),
-      date: formData.get('date'),
-    });
+    const transactionData = {
+  type: formData.get('type'),
+  amount: formData.get('amount'),
+  category: formData.get('category'),
+  description: formData.get('description'),
+  date: formData.get('date'),
+};
 
-    saveTransaction(transaction);
+if (editingTransactionId) {
+  updateTransaction(
+    editingTransactionId,
+    transactionData
+  );
+
+  editingTransactionId = null;
+} else {
+  const transaction = createTransaction(transactionData);
+
+  saveTransaction(transaction);
+}
 
     const updatedTransactions = getTransactions();
 
@@ -205,6 +229,57 @@ export function initFinances() {
 
     transactionFormCard.classList.add('hidden');
   });
+  const transactionsContainer = document.querySelector('#transactions-container');
+
+  transactionsContainer.addEventListener('click', (event) => {
+    const editButton = event.target.closest(
+  '.edit-transaction-button'
+);
+
+if (editButton) {
+  const transactionId = editButton.dataset.id;
+
+  const transactions = getTransactions();
+
+  const transaction = transactions.find(
+    (transaction) => transaction.id === transactionId
+  );
+
+  if (!transaction) return;
+
+  editingTransactionId = transaction.id;
+
+  transactionForm.elements.type.value = transaction.type;
+  transactionForm.elements.amount.value = transaction.amount;
+  transactionForm.elements.category.value = transaction.category;
+  transactionForm.elements.description.value = transaction.description;
+  transactionForm.elements.date.value = transaction.date;
+
+  transactionFormCard.classList.remove('hidden');
+
+  return;
+}
+  const deleteButton = event.target.closest(
+    '.delete-transaction-button'
+  );
+
+  if (!deleteButton) return;
+
+  const transactionId = deleteButton.dataset.id;
+
+  const shouldDelete = window.confirm(
+    '¿Seguro que quieres eliminar este movimiento?'
+  );
+
+  if (!shouldDelete) return;
+
+  deleteTransaction(transactionId);
+
+  const updatedTransactions = getTransactions();
+
+  renderTransactions(updatedTransactions);
+  updateFinanceSummary(updatedTransactions);
+});
 }
 
 function renderTransactions(transactions) {
@@ -230,21 +305,63 @@ function renderTransactions(transactions) {
   }
 
   container.innerHTML = transactions
-    .map((transaction) => {
-      return `
-        <div class="transaction-item">
-          <div>
-            <strong>${transaction.description}</strong>
-            <p>${transaction.category}</p>
+  .map((transaction) => {
+    const isIncome = transaction.type === 'income';
+    const sign = isIncome ? '+' : '-';
+
+    return `
+      <div class="transaction-item">
+        <div class="transaction-info">
+          <div
+            class="transaction-type-icon ${
+              isIncome ? 'income' : 'expense'
+            }"
+          >
+            ${isIncome ? '↗' : '↘'}
           </div>
 
-          <strong>
-            ${formatCurrency(transaction.amount)}
-          </strong>
+          <div>
+            <strong>${transaction.description}</strong>
+
+            <p>
+              ${transaction.category}
+              ·
+              ${formatDate(transaction.date)}
+            </p>
+          </div>
         </div>
-      `;
-    })
-    .join("");
+
+        <div class="transaction-actions">
+          <strong class="transaction-amount ${
+            isIncome ? 'income' : 'expense'
+          }">
+            ${sign}${formatCurrency(transaction.amount)}
+          </strong>
+
+          <button
+            type="button"
+            class="edit-transaction-button"
+            data-id="${transaction.id}"
+            aria-label="Editar ${transaction.description}"
+            title="Editar movimiento"
+          >
+            ✎
+          </button>
+          
+          <button
+            type="button"
+            class="delete-transaction-button"
+            data-id="${transaction.id}"
+            aria-label="Eliminar ${transaction.description}"
+            title="Eliminar movimiento"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    `;
+  })
+  .join('');
 }
 
 function updateFinanceSummary(transactions) {
@@ -283,4 +400,22 @@ function getTodayDate() {
   const day = String(today.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
+}
+
+function formatDate(date) {
+  if (!date) return 'Sin fecha';
+
+  const [year, month, day] = date.split('-');
+
+  const localDate = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day)
+  );
+
+  return new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(localDate);
 }
