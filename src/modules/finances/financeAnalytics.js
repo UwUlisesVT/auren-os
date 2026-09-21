@@ -77,3 +77,17 @@ export function getSavingsRate(transactions) {
 
   return ((income - expenses) / income) * 100;
 }
+
+export function getTransactionsByPeriod(
+  transactions,
+  month
+) {
+  if (!month) {
+    return transactions;
+  }
+
+  return transactions.filter(
+    (transaction) =>
+      transaction.date.startsWith(month)
+  );
+}

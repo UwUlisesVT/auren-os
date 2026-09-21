@@ -714,9 +714,8 @@ body.light-theme {
 
 .transaction-filters {
   display: grid;
-  grid-template-columns: minmax(200px, 2fr) 1fr 1fr;
+  grid-template-columns: minmax(200px, 2fr) repeat(3, 1fr);
   gap: 1rem;
-
   padding: 1rem 0 1.5rem;
 }
 
@@ -734,7 +733,8 @@ body.light-theme {
 }
 
 .filter-search input,
-.filter-group select {
+.filter-group select,
+#transaction-month-filter {
   width: 100%;
   padding: 0.75rem 0.9rem;
 

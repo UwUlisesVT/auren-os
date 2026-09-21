@@ -11,6 +11,7 @@ import {
   getFinancialSummary,
   getSavingsRate,
   getTransactionsByMonth,
+  getTransactionsByPeriod,
 } from './financeAnalytics.js';
 
 import {
@@ -20,29 +21,39 @@ import {
 function refreshFinances(filters = null) {
   const transactions = getTransactions();
 
-  const expensesByCategory =
-    getExpensesByCategory(transactions);
-
-  const transactionsByMonth =
-    getTransactionsByMonth(transactions);
-
   updateCategoryFilter(transactions);
+
+  const periodTransactions =
+    getTransactionsByPeriod(
+      transactions,
+      filters?.month ?? ''
+    );
 
   const filteredTransactions = filters
     ? filterTransactions(transactions, filters)
     : transactions;
 
   const hasActiveFilters =
-  filters &&
-  (
-    filters.search !== '' ||
-    filters.type !== 'all' ||
-    filters.category !== 'all'
-  );
-  
-  renderTransactions(filteredTransactions, hasActiveFilters );
+    filters &&
+    (
+      filters.search !== '' ||
+      filters.type !== 'all' ||
+      filters.category !== 'all' ||
+      filters.month !== ''
+    );
 
-  updateFinanceSummary(transactions);
+  renderTransactions(
+    filteredTransactions,
+    hasActiveFilters
+  );
+
+  updateFinanceSummary(periodTransactions);
+
+  const expensesByCategory =
+    getExpensesByCategory(periodTransactions);
+
+  const transactionsByMonth =
+    getTransactionsByMonth(periodTransactions);
 
   renderFinanceCharts({
     expensesByCategory,
@@ -248,34 +259,49 @@ export function createFinances() {
       </div>
 
       <div class="transaction-filters">
-      <div class="filter-search">
-        <label for="transaction-search">Buscar</label>
+        <div class="filter-search">
+          <label for="transaction-search">Buscar</label>
+          <input
+            type="search"
+            id="transaction-search"
+            placeholder="Buscar movimiento..."
+            autocomplete="off"
+          >
+        </div>
 
-        <input
-          type="search"
-          id="transaction-search"
-          placeholder="Buscar movimiento..."
-          autocomplete="off"
-        >
-      </div>
+        <div class="filter-group">
+          <label for="transaction-month-filter">Período</label>
 
-      <div class="filter-group">
-        <label for="transaction-type-filter">Tipo</label>
+          <input
+            type="month"
+            id="transaction-month-filter"
+          >
+          <button
+            type="button"
+            class="clear-period-button"
+            id="clear-period-button"
+          >
+            Todos
+          </button>
+        </div>
 
-        <select id="transaction-type-filter">
-          <option value="all">Todos</option>
-          <option value="income">Ingresos</option>
-          <option value="expense">Gastos</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label for="transaction-type-filter">Tipo</label>
 
-      <div class="filter-group">
-        <label for="transaction-category-filter">Categoría</label>
+          <select id="transaction-type-filter">
+            <option value="all">Todos</option>
+            <option value="income">Ingresos</option>
+            <option value="expense">Gastos</option>
+          </select>
+        </div>
 
-        <select id="transaction-category-filter">
-          <option value="all">Todas</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label for="transaction-category-filter">Categoría</label>
+
+          <select id="transaction-category-filter">
+            <option value="all">Todas</option>
+          </select>
+        </div>
 </div>
 
       <div id="transactions-container"></div>
@@ -289,7 +315,28 @@ export function initFinances() {
     search: '',
     type: 'all',
     category: 'all',
+    month: '',
   };
+
+  const monthFilter =
+    document.querySelector('#transaction-month-filter');
+
+  monthFilter.addEventListener('change', () => {
+    filters.month = monthFilter.value;
+
+    refreshFinances(filters);
+  });
+
+  const clearPeriodButton =
+    document.querySelector('#clear-period-button');
+  
+  clearPeriodButton.addEventListener('click', () => {
+    filters.month = '';
+    monthFilter.value = '';
+  
+    refreshFinances(filters);
+  });
+
   refreshFinances(filters);
 
   const newTransactionButton =
@@ -453,11 +500,16 @@ function filterTransactions(transactions, filters) {
     const matchesCategory =
       filters.category === 'all' ||
       transaction.category === filters.category;
+    
+    const matchesMonth =
+      filters.month === '' ||
+      transaction.date.startsWith(filters.month);
 
     return (
       matchesSearch &&
       matchesType &&
-      matchesCategory
+      matchesCategory &&
+      matchesMonth
     );
   });
 }
