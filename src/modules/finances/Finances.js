@@ -6,6 +6,28 @@ import {
   updateTransaction,
 } from '../../services/transactionService.js';
 
+function refreshFinances(filters = null) {
+  const transactions = getTransactions();
+
+  updateCategoryFilter(transactions);
+
+  const filteredTransactions = filters
+    ? filterTransactions(transactions, filters)
+    : transactions;
+
+  const hasActiveFilters =
+  filters &&
+  (
+    filters.search !== '' ||
+    filters.type !== 'all' ||
+    filters.category !== 'all'
+  );
+  
+  renderTransactions(filteredTransactions, hasActiveFilters );
+
+  updateFinanceSummary(transactions);
+}
+
 export function createFinances() {
   return `
     <section class="page-header">
@@ -146,6 +168,37 @@ export function createFinances() {
         </div>
       </div>
 
+      <div class="transaction-filters">
+      <div class="filter-search">
+        <label for="transaction-search">Buscar</label>
+
+        <input
+          type="search"
+          id="transaction-search"
+          placeholder="Buscar movimiento..."
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="filter-group">
+        <label for="transaction-type-filter">Tipo</label>
+
+        <select id="transaction-type-filter">
+          <option value="all">Todos</option>
+          <option value="income">Ingresos</option>
+          <option value="expense">Gastos</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="transaction-category-filter">Categoría</label>
+
+        <select id="transaction-category-filter">
+          <option value="all">Todas</option>
+        </select>
+      </div>
+</div>
+
       <div id="transactions-container"></div>
     </section>
   `;
@@ -153,10 +206,12 @@ export function createFinances() {
 
 export function initFinances() {
   let editingTransactionId = null;
-  const transactions = getTransactions();
-
-  renderTransactions(transactions);
-  updateFinanceSummary(transactions);
+  const filters = {
+    search: '',
+    type: 'all',
+    category: 'all',
+  };
+  refreshFinances(filters);
 
   const newTransactionButton =
     document.querySelector('#new-transaction-button');
@@ -173,6 +228,15 @@ export function initFinances() {
   const transactionDate =
     document.querySelector('#transaction-date');
 
+  const searchInput =
+    document.querySelector('#transaction-search');
+
+  const typeFilter =
+    document.querySelector('#transaction-type-filter');
+
+  const categoryFilter =
+    document.querySelector('#transaction-category-filter');
+
   transactionDate.value = getTodayDate();
 
   newTransactionButton.addEventListener('click', () => {
@@ -186,10 +250,10 @@ export function initFinances() {
 
   closeTransactionForm.addEventListener('click', () => {
     editingTransactionId = null;
-    
+
     transactionForm.reset();
     transactionDate.value = getTodayDate();
-    
+
     transactionFormCard.classList.add('hidden');
   });
 
@@ -199,30 +263,27 @@ export function initFinances() {
     const formData = new FormData(transactionForm);
 
     const transactionData = {
-  type: formData.get('type'),
-  amount: formData.get('amount'),
-  category: formData.get('category'),
-  description: formData.get('description'),
-  date: formData.get('date'),
-};
+      type: formData.get('type'),
+      amount: formData.get('amount'),
+      category: formData.get('category'),
+      description: formData.get('description'),
+      date: formData.get('date'),
+    };
 
-if (editingTransactionId) {
-  updateTransaction(
-    editingTransactionId,
-    transactionData
-  );
+    if (editingTransactionId) {
+      updateTransaction(
+        editingTransactionId,
+        transactionData
+    );
 
-  editingTransactionId = null;
-} else {
-  const transaction = createTransaction(transactionData);
+    editingTransactionId = null;
+  } else {
+    const transaction = createTransaction(transactionData);
 
-  saveTransaction(transaction);
-}
+    saveTransaction(transaction);
+  }
 
-    const updatedTransactions = getTransactions();
-
-    renderTransactions(updatedTransactions);
-    updateFinanceSummary(updatedTransactions);
+    refreshFinances(filters);
 
     transactionForm.reset();
     transactionDate.value = getTodayDate();
@@ -233,8 +294,26 @@ if (editingTransactionId) {
 
   transactionsContainer.addEventListener('click', (event) => {
     const editButton = event.target.closest(
-  '.edit-transaction-button'
-);
+      '.edit-transaction-button'
+    );
+
+    searchInput.addEventListener('input', () => {
+  filters.search = searchInput.value.trim().toLowerCase();
+
+  refreshFinances(filters);
+});
+
+typeFilter.addEventListener('change', () => {
+  filters.type = typeFilter.value;
+
+  refreshFinances(filters);
+});
+
+categoryFilter.addEventListener('change', () => {
+  filters.category = categoryFilter.value;
+
+  refreshFinances(filters);
+});
 
 if (editButton) {
   const transactionId = editButton.dataset.id;
@@ -263,46 +342,114 @@ if (editButton) {
     '.delete-transaction-button'
   );
 
-  if (!deleteButton) return;
-
-  const transactionId = deleteButton.dataset.id;
-
-  const shouldDelete = window.confirm(
-    '¿Seguro que quieres eliminar este movimiento?'
-  );
-
-  if (!shouldDelete) return;
-
-  deleteTransaction(transactionId);
-
-  const updatedTransactions = getTransactions();
-
-  renderTransactions(updatedTransactions);
-  updateFinanceSummary(updatedTransactions);
-});
+    if (!deleteButton) return;
+  
+    const transactionId = deleteButton.dataset.id;
+  
+    const shouldDelete = window.confirm(
+      '¿Seguro que quieres eliminar este movimiento?'
+    );
+  
+    if (!shouldDelete) return;
+  
+    deleteTransaction(transactionId);
+  
+    refreshFinances(filters);
+  });
 }
 
-function renderTransactions(transactions) {
+function filterTransactions(transactions, filters) {
+  return transactions.filter((transaction) => {
+    const description = transaction.description.toLowerCase();
+    const category = transaction.category.toLowerCase();
+
+    const matchesSearch =
+      description.includes(filters.search) ||
+      category.includes(filters.search);
+
+    const matchesType =
+      filters.type === 'all' ||
+      transaction.type === filters.type;
+
+    const matchesCategory =
+      filters.category === 'all' ||
+      transaction.category === filters.category;
+
+    return (
+      matchesSearch &&
+      matchesType &&
+      matchesCategory
+    );
+  });
+}
+
+function updateCategoryFilter(transactions) {
+  const categoryFilter =
+    document.querySelector('#transaction-category-filter');
+
+  if (!categoryFilter) return;
+
+  const currentValue = categoryFilter.value;
+
+  const categories = [
+    ...new Set(
+      transactions.map(
+        (transaction) => transaction.category
+      )
+    ),
+  ].sort();
+
+  categoryFilter.innerHTML = `
+    <option value="all">Todas</option>
+
+    ${categories
+      .map(
+        (category) => `
+          <option value="${category}">
+            ${category}
+          </option>
+        `
+      )
+      .join('')}
+  `;
+
+  if (categories.includes(currentValue)) {
+    categoryFilter.value = currentValue;
+  }
+}
+
+function renderTransactions(transactions, hasActiveFilters = false) {
   const container = document.querySelector("#transactions-container");
 
   if (!container) return;
 
   if (transactions.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">◈</div>
-
-        <h3>Aún no tienes movimientos</h3>
-
-        <p>
-          Registra tu primer ingreso o gasto para comenzar
-          a construir tu historial financiero.
-        </p>
+  container.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        ${hasActiveFilters ? '⌕' : '◈'}
       </div>
-    `;
 
-    return;
-  }
+      <h3>
+        ${
+          hasActiveFilters
+            ? 'No encontramos movimientos'
+            : 'Aún no tienes movimientos'
+        }
+      </h3>
+
+      <p>
+        ${
+          hasActiveFilters
+            ? 'Prueba modificando los filtros de búsqueda.'
+            : 'Registra tu primer ingreso o gasto para comenzar a construir tu historial financiero.'
+        }
+      </p>
+    </div>
+  `;
+
+  return;
+}
 
   container.innerHTML = transactions
   .map((transaction) => {

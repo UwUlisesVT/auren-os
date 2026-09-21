@@ -708,3 +708,50 @@ body.light-theme {
   color: var(--color-primary);
   background: rgba(167, 139, 250, 0.1);
 }
+
+.transaction-filters {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) 1fr 1fr;
+  gap: 1rem;
+
+  padding: 1rem 0 1.5rem;
+}
+
+.filter-search,
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-search label,
+.filter-group label {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.filter-search input,
+.filter-group select {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+
+  color: var(--color-text);
+  background: var(--color-background);
+
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--border-radius) * 0.7);
+
+  font: inherit;
+}
+
+.filter-search input:focus,
+.filter-group select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+@media (max-width: 700px) {
+  .transaction-filters {
+    grid-template-columns: 1fr;
+  }
+}

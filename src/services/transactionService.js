@@ -19,13 +19,26 @@ export function createTransaction({
 }
 
 export function getTransactions() {
-  const transactions = localStorage.getItem(STORAGE_KEY);
+  const storedTransactions = localStorage.getItem(STORAGE_KEY);
 
-  if (!transactions) {
+  if (!storedTransactions) {
     return [];
   }
 
-  return JSON.parse(transactions);
+  try {
+    const transactions = JSON.parse(storedTransactions);
+
+    return Array.isArray(transactions)
+      ? transactions
+      : [];
+  } catch (error) {
+    console.error(
+      'No fue posible leer las transacciones almacenadas.',
+      error
+    );
+
+    return [];
+  }
 }
 
 export function saveTransaction(transaction) {
